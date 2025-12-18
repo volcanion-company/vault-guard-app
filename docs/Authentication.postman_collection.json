@@ -1,0 +1,205 @@
+{
+	"info": {
+		"_postman_id": "auth-controller-collection",
+		"name": "Authentication Controller API",
+		"description": "Postman collection for VolcanionAuth Authentication API endpoints (v1.0)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Register User",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"YourPassword123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/authentication/register",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"authentication",
+						"register"
+					]
+				},
+				"description": "Handles a user registration request by creating a new user account with the provided registration details. Returns HTTP 200 OK with user details on successful registration, or HTTP 400 Bad Request if registration fails."
+			},
+			"response": []
+		},
+		{
+			"name": "Login User",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var jsonData = pm.response.json();",
+							"    if (jsonData.accessToken) {",
+							"        pm.environment.set(\"accessToken\", jsonData.accessToken);",
+							"    }",
+							"    if (jsonData.refreshToken) {",
+							"        pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"YourPassword123!\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/authentication/login",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"authentication",
+						"login"
+					]
+				},
+				"description": "Authenticates a user using the provided login credentials. The user's IP address and user agent are automatically included in the login request for auditing and security purposes. Returns HTTP 200 OK on success or HTTP 401 Unauthorized if authentication fails."
+			},
+			"response": []
+		},
+		{
+			"name": "Logout User",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{accessToken}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/authentication/logout",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"authentication",
+						"logout"
+					]
+				},
+				"description": "Logs out the currently authenticated user. Requires a valid access token in the Authorization header. Returns HTTP 200 OK with a success message."
+			},
+			"response": []
+		},
+		{
+			"name": "Refresh Token",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"if (pm.response.code === 200) {",
+							"    var jsonData = pm.response.json();",
+							"    if (jsonData.accessToken) {",
+							"        pm.environment.set(\"accessToken\", jsonData.accessToken);",
+							"    }",
+							"    if (jsonData.refreshToken) {",
+							"        pm.environment.set(\"refreshToken\", jsonData.refreshToken);",
+							"    }",
+							"}"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/authentication/refresh",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"authentication",
+						"refresh"
+					]
+				},
+				"description": "Refreshes an access token using a valid refresh token. This endpoint allows clients to obtain a new access token and refresh token pair without requiring the user to re-authenticate. Returns HTTP 200 OK with new tokens on success, or HTTP 400 Bad Request if the refresh token is invalid, expired, or revoked."
+			},
+			"response": []
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5000",
+			"type": "string"
+		}
+	]
+}
