@@ -9,6 +9,7 @@
  */
 
 import * as Crypto from 'expo-crypto';
+import { encode as base64Encode } from 'base-64';
 
 const PBKDF2_ITERATIONS = 100000;
 const KEY_LENGTH = 32; // 256 bits for AES-256
@@ -125,10 +126,10 @@ function stringToBytes(str: string): Uint8Array {
  * Convert Uint8Array to base64 string
  */
 function bytesToBase64(bytes: Uint8Array): string {
-  // Use btoa for React Native compatibility
+  // Convert to binary string
   let binary = '';
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  return btoa(binary);
+  return base64Encode(binary);
 }

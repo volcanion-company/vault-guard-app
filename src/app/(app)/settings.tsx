@@ -18,8 +18,9 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/auth.store';
 import { Button } from '@/components/Button';
 import { getDeviceInfo } from '@/utils/device';
+import ENV from '@/config/env';
 
-const BIOMETRIC_ENABLED_KEY = 'vaultguard_biometric_enabled';
+const BIOMETRIC_ENABLED_KEY = ENV.STORAGE_KEYS.BIOMETRIC_ENABLED;
 
 export default function SettingsScreen() {
   const router = useRouter();

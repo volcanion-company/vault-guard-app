@@ -42,7 +42,17 @@ export default function ItemDetailScreen() {
 
   const handleDecrypt = async () => {
     if (!encryptionKey) {
-      Alert.alert('Error', 'Encryption key not available');
+      Alert.alert(
+        'Locked',
+        'Please unlock the app first',
+        [
+          {
+            text: 'Go to Unlock',
+            onPress: () => router.replace('/(auth)/unlock'),
+          },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
       return;
     }
 
@@ -50,7 +60,17 @@ export default function ItemDetailScreen() {
     try {
       await decryptItem(itemId!, encryptionKey);
     } catch (err) {
-      Alert.alert('Error', 'Failed to decrypt item. Wrong password?');
+      Alert.alert(
+        'Decryption Failed',
+        'Unable to decrypt this item. This usually means the password used to unlock the app is incorrect.',
+        [
+          {
+            text: 'Re-enter Password',
+            onPress: () => router.replace('/(auth)/unlock'),
+          },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
     } finally {
       setIsDecrypting(false);
     }
