@@ -98,8 +98,13 @@ export default function CreateItemScreen() {
     const charset =
       'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
     let password = '';
+    
+    // Use cryptographically secure random number generator
+    const randomValues = new Uint8Array(length);
+    crypto.getRandomValues(randomValues);
+    
     for (let i = 0; i < length; i++) {
-      password += charset.charAt(Math.floor(Math.random() * charset.length));
+      password += charset.charAt(randomValues[i] % charset.length);
     }
     setFormData((prev) => ({ ...prev, password }));
   };

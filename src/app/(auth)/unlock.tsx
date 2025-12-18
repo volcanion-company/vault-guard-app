@@ -3,9 +3,11 @@
  * 
  * When app is locked (encryption key cleared but session active),
  * user must re-enter master password to derive encryption key
+ * 
+ * Supports biometric authentication if enabled in settings
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,15 +15,74 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
 import { useAuthStore } from '@/store/auth.store';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { ErrorMessage } from '@/components/ErrorMessage';
+import ENV from '@/config/env';
 
 export default function UnlockScreen() {
   const { user, unlockApp, logout, isLoading, error, clearError } = useAuthStore();
   const [password, setPassword] = useState('');
+  const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(false);
+
+  useEffect(() => {
+    checkBiometric();
+  }, []);
+
+  const checkBiometric = async () => {
+    const compatible = await LocalAuthentication.hasHardwareAsync();
+    const enrolled = await LocalAuthentication.isEnrolledAsync();
+    const available = compatible && enrolled;
+    setBiometricAvailable(available);
+
+    if (available) {
+      const enabled = await SecureStore.getItemAsync(
+        ENV.STORAGE_KEYS.BIOMETRIC_ENABLED
+      );
+      setBiometricEnabled(enabled === 'true');
+
+      // Auto-prompt biometric if enabled
+      if (enabled === 'true') {
+        handleBiometricUnlock();
+      }
+    }
+  };
+
+  const handleBiometricUnlock = async () => {
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Unlock VaultGuard',
+        fallbackLabel: 'Use password',
+        disableDeviceFallback: false,
+      });
+
+      if (result.success) {
+        // Get stored master password from secure store
+        // Note: This is encrypted and only accessible after biometric auth
+        const storedPassword = await SecureStore.getItemAsync(
+          'vaultguard_biometric_password'
+        );
+
+        if (storedPassword) {
+          setPassword(storedPassword);
+          await unlockApp(storedPassword);
+        } else {
+          Alert.alert(
+            'Setup Required',
+            'Please unlock with your password once to enable biometric unlock.'
+          );
+        }
+      }
+    } catch (err) {
+      console.error('Biometric authentication failed:', err);
+    }
+  };
 
   const handleUnlock = async () => {
     if (!password) {
@@ -33,6 +94,15 @@ export default function UnlockScreen() {
 
     try {
       await unlockApp(password);
+      
+      // Save password for biometric unlock if enabled
+      if (biometricEnabled) {
+        await SecureStore.setItemAsync(
+          'vaultguard_biometric_password',
+          password
+        );
+      }
+      
       // Navigation handled by _layout.tsx
     } catch (err) {
       // Error displayed via ErrorMessage component
@@ -76,6 +146,16 @@ export default function UnlockScreen() {
         <View style={styles.form}>
           {error && (
             <ErrorMessage message={error} onDismiss={clearError} />
+          )}
+
+          {biometricAvailable && biometricEnabled && (
+            <TouchableOpacity
+              style={styles.biometricButton}
+              onPress={handleBiometricUnlock}
+            >
+              <Text style={styles.biometricIcon}>👆</Text>
+              <Text style={styles.biometricText}>Use Biometric</Text>
+            </TouchableOpacity>
           )}
 
           <Input
@@ -150,6 +230,26 @@ const styles = StyleSheet.create({
   },
   form: {
     width: '100%',
+  },
+  biometricButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    marginBottom: 16,
+  },
+  biometricIcon: {
+    fontSize: 32,
+    marginBottom: 4,
+  },
+  biometricText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
   },
   unlockButton: {
     marginBottom: 12,

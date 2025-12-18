@@ -10,6 +10,8 @@
  * - Server NEVER sees plaintext data
  */
 
+import { decode as base64Decode, encode as base64Encode } from 'base-64';
+
 export interface EncryptedData {
   encryptedData: string; // Base64-encoded ciphertext
   iv: string; // Base64-encoded initialization vector (12 bytes)
@@ -169,7 +171,7 @@ export async function decryptObject<T = any>(
  * Convert base64 string to Uint8Array
  */
 function base64ToBytes(base64: string): Uint8Array {
-  const binary = atob(base64);
+  const binary = base64Decode(base64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i);
@@ -185,5 +187,5 @@ function bytesToBase64(bytes: Uint8Array): string {
   for (let i = 0; i < bytes.length; i++) {
     binary += String.fromCharCode(bytes[i]);
   }
-  return btoa(binary);
+  return base64Encode(binary);
 }
