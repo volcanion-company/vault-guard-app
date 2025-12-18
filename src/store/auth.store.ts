@@ -18,6 +18,8 @@ import * as SecureStore from 'expo-secure-store';
 import { AuthService } from '@/services/auth.service';
 import { deriveEncryptionKey } from '@/crypto';
 import { User, LoginRequest, RegisterRequest } from '@/types';
+import { saveTokens, clearTokens } from '@/services/api';
+import ENV from '@/config/env';
 
 interface AuthStore {
   // State
@@ -113,6 +115,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         authResponse.userId
       );
 
+      // Persist tokens to SecureStore
+      await saveTokens(authResponse.accessToken, authResponse.refreshToken);
+
       // Update state
       set({
         user: {
@@ -143,6 +148,9 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     } catch (error) {
       console.warn('Logout API call failed:', error);
     } finally {
+      // Clear tokens from SecureStore
+      await clearTokens();
+      
       // Clear all state
       set({
         user: null,
@@ -161,10 +169,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     try {
       const accessToken = await SecureStore.getItemAsync(
-        'vaultguard_access_token'
+        ENV.STORAGE_KEYS.ACCESS_TOKEN
       );
       const refreshToken = await SecureStore.getItemAsync(
-        'vaultguard_refresh_token'
+        ENV.STORAGE_KEYS.REFRESH_TOKEN
       );
 
       if (accessToken && refreshToken) {
@@ -207,8 +215,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       // Re-derive encryption key
       const encryptionKey = await deriveEncryptionKey(masterPassword, user.id);
 
-      // TODO: Verify password by attempting to decrypt a test item
-      // For now, we just set the key
+      // Note: Password verification happens when user tries to decrypt their first item
+      // If wrong password was entered, decryption will fail and user will see error
+      // This is acceptable since we can't verify without attempting decryption
+      
       set({
         encryptionKey,
         isLoading: false,

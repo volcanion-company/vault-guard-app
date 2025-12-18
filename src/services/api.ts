@@ -20,6 +20,19 @@ const API_BASE_URL = ENV.API_BASE_URL;
 // Secure storage keys
 const STORAGE_KEYS = ENV.STORAGE_KEYS;
 
+// Token refresh mutex to prevent race conditions
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function subscribeTokenRefresh(callback: (token: string) => void): void {
+  refreshSubscribers.push(callback);
+}
+
+function onTokenRefreshed(token: string): void {
+  refreshSubscribers.forEach((callback) => callback(token));
+  refreshSubscribers = [];
+}
+
 /**
  * Create Axios instance for Authentication Service
  */
@@ -69,7 +82,7 @@ apiClient.interceptors.request.use(
 // ===== Response Interceptors =====
 
 /**
- * Handle token refresh on 401 Unauthorized
+ * Handle token refresh on 401 Unauthorized with mutex to prevent race conditions
  */
 apiClient.interceptors.response.use(
   (response) => response,
@@ -81,6 +94,18 @@ apiClient.interceptors.response.use(
     // If 401 and not already retried, attempt token refresh
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
+
+      // If refresh is already in progress, queue this request
+      if (isRefreshing) {
+        return new Promise((resolve) => {
+          subscribeTokenRefresh((token: string) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            resolve(apiClient(originalRequest));
+          });
+        });
+      }
+
+      isRefreshing = true;
 
       try {
         const refreshToken = await SecureStore.getItemAsync(
@@ -109,11 +134,17 @@ apiClient.interceptors.response.use(
           newRefreshToken
         );
 
+        // Notify all queued requests with new token
+        onTokenRefreshed(newAccessToken);
+        isRefreshing = false;
+
         // Retry original request with new token
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh failed - user needs to log in again
+        // Refresh failed - clear queue and tokens
+        refreshSubscribers = [];
+        isRefreshing = false;
         await clearTokens();
         // Navigation to login will be handled by auth store
         return Promise.reject(refreshError);
